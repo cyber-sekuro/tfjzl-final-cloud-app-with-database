@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
 # <HINT> Import any new Models here
-from .models import Course, Enrollment
+from .models import Course, Enrollment, Question, Choice, Submission
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
@@ -110,7 +110,39 @@ def enroll(request, course_id):
          # Collect the selected choices from exam form
          # Add each selected choice object to the submission object
          # Redirect to show_exam_result with the submission id
-#def submit(request, course_id):
+
+def submit(request, course_id):
+    if request.method != 'POST':
+        return redirect('onlinecourse:course_details', pk=course_id)
+
+    course = get_object_or_404(Course, pk=course_id)
+
+    if not request.user.is_authenticated:
+        return redirect('onlinecourse:login')
+
+    enrollment = get_object_or_404(
+        Enrollment,
+        user=request.user,
+        course=course
+    )
+
+    submission = Submission.objects.create(enrollment=enrollment)
+
+    selected_ids = extract_answers(request)
+
+    choices = Choice.objects.filter(
+        id__in=selected_ids,
+        question__course=course
+    )
+
+    submission.choices.set(choices)
+
+    return redirect(
+        'onlinecourse:exam_result',
+        course_id=course.id,
+        submission_id=submission.id
+    )
+
 
 
 # An example method to collect the selected choices from the exam form from the request object
@@ -130,7 +162,51 @@ def extract_answers(request):
         # Get the selected choice ids from the submission record
         # For each selected choice, check if it is a correct answer or not
         # Calculate the total score
-#def show_exam_result(request, course_id, submission_id):
+
+def show_exam_result(request, course_id, submission_id):
+    if not request.user.is_authenticated:
+        return redirect('onlinecourse:login')
+
+    course = get_object_or_404(Course, pk=course_id)
+
+    submission = get_object_or_404(
+        Submission,
+        pk=submission_id,
+        enrollment__course=course,
+        enrollment__user=request.user
+    )
+
+    choices = submission.choices.all()
+    total_score = 0
+
+    questions = course.question_set.all()
+
+    for question in questions:
+        correct_ids = set(
+            question.choice_set.filter(is_correct=True)
+            .values_list('id', flat=True)
+        )
+
+        selected_ids = set(
+            choices.filter(question=question)
+            .values_list('id', flat=True)
+        )
+
+        if correct_ids == selected_ids:
+            total_score += question.grade
+
+    context = {
+        'course': course,
+        'grade': total_score,
+        'choices': choices
+    }
+
+    return render(
+        request,
+        'onlinecourse/exam_result_bootstrap.html',
+        context
+    )
+
 
 
 
