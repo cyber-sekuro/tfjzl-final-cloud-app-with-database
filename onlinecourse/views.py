@@ -138,7 +138,7 @@ def submit(request, course_id):
     submission.choices.set(choices)
 
     return redirect(
-        'onlinecourse:exam_result',
+        'onlinecourse:show_exam_result',
         course_id=course.id,
         submission_id=submission.id
     )
