@@ -163,6 +163,7 @@ def extract_answers(request):
         # For each selected choice, check if it is a correct answer or not
         # Calculate the total score
 
+
 def show_exam_result(request, course_id, submission_id):
     if not request.user.is_authenticated:
         return redirect('onlinecourse:login')
@@ -177,11 +178,11 @@ def show_exam_result(request, course_id, submission_id):
     )
 
     choices = submission.choices.all()
-        selected_ids = list(
+    selected_ids = list(
         choices.values_list('id', flat=True)
     )
-    total_score = 0
 
+    total_score = 0
     questions = course.question_set.all()
 
     for question in questions:
@@ -190,18 +191,18 @@ def show_exam_result(request, course_id, submission_id):
             .values_list('id', flat=True)
         )
 
-        selected_ids = set(
+        question_selected_ids = set(
             choices.filter(question=question)
             .values_list('id', flat=True)
         )
 
-        if correct_ids == selected_ids:
+        if correct_ids == question_selected_ids:
             total_score += question.grade
 
     context = {
         'course': course,
         'grade': total_score,
-        'choices': choices
+        'choices': choices,
         'selected_ids': selected_ids
     }
 
@@ -210,7 +211,3 @@ def show_exam_result(request, course_id, submission_id):
         'onlinecourse/exam_result_bootstrap.html',
         context
     )
-
-
-
-
